@@ -408,56 +408,56 @@ const App = () => {
       }
       }
     );
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permission to access location was denied');
-        return;
-      }
+    // (async () => {
+    //   let { status } = await Location.requestForegroundPermissionsAsync();
+    //   if (status !== 'granted') {
+    //     setErrorMsg('Permission to access location was denied');
+    //     return;
+    //   }
 
-      // Get the initial location
-      let initialLocation = await Location.getCurrentPositionAsync({
-        // accuracy: Accuracy.High,
-        enableHighAccuracy: true
-      });
-      setLocation(initialLocation);
-      // console.log(initialLocation)
-      templocation = initialLocation
+    //   // Get the initial location
+    //   let initialLocation = await Location.getCurrentPositionAsync({
+    //     // accuracy: Accuracy.High,
+    //     enableHighAccuracy: true
+    //   });
+    //   setLocation(initialLocation);
+    //   // console.log(initialLocation)
+    //   templocation = initialLocation
 
 
-      const intervalId = setInterval(async () => {
-        let updatedLocation = await Location.getCurrentPositionAsync({});
-        setLocation(updatedLocation);
-        templocation = updatedLocation
-        // console.log(templocation.timestamp + ", a")
-        // console.log(templocation.coords.speed + ", d")
-        // updatedLocation.remove();
+    //   const intervalId = setInterval(async () => {
+    //     let updatedLocation = await Location.getCurrentPositionAsync({});
+    //     setLocation(updatedLocation);
+    //     templocation = updatedLocation
+    //     // console.log(templocation.timestamp + ", a")
+    //     // console.log(templocation.coords.speed + ", d")
+    //     // updatedLocation.remove();
 
-      }, coords_interval_ms);
+    //   }, coords_interval_ms);
 
-      return () => {
-        clearInterval(intervalId);
-      };
+    //   return () => {
+    //     clearInterval(intervalId);
+    //   };
 
-      // const locationListener = await Location.watchPositionAsync(
-      //   { timeInterval: coords_interval_ms },
-      //   (newLocation) => {
-      //     setLocation(newLocation);
-      //     templocation = newLocation
-      //     console.log(templocation.timestamp + ", b")
-      //     console.log(templocation.coords.speed + ", c")
-      //     locationListener.remove();
-      //   }
-      // );
+    //   // const locationListener = await Location.watchPositionAsync(
+    //   //   { timeInterval: coords_interval_ms },
+    //   //   (newLocation) => {
+    //   //     setLocation(newLocation);
+    //   //     templocation = newLocation
+    //   //     console.log(templocation.timestamp + ", b")
+    //   //     console.log(templocation.coords.speed + ", c")
+    //   //     locationListener.remove();
+    //   //   }
+    //   // );
 
-      // return () => {
-      //   if (locationListener) {
-      //     locationListener.remove();
-      //   }
-      // };
+    //   // return () => {
+    //   //   if (locationListener) {
+    //   //     locationListener.remove();
+    //   //   }
+    //   // };
 
       
-    })();
+    // })();
     const interval = setInterval(() => {
       var curtime = Date.now()/1000
 
