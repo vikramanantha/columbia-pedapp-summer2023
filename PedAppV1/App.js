@@ -106,6 +106,7 @@ const circles = [
 
 function ping_server (c) {
   // format: msgtype, ped_id_mqtt, lat, long, times, place
+  console.log("ping")
   const message = new Paho.Message((
     'ping' + ',' + 
     ped_id + "," + 
@@ -262,8 +263,8 @@ const App = () => {
     }
   });
   const [xcoord, setxcoord] = useState(-1)
-  const [trafficstatus, changetrafficstatus] = useState("")
-  const [traffictime, changetraffictime] = useState(-1)
+  // const [trafficstatus, changetrafficstatus] = useState("")
+  // const [traffictime, changetraffictime] = useState(-1)
   const [ycoord, setycoord] = useState(-1)
   const [errorMsg, setErrorMsg] = useState(null);
   const [latency, setlatency] = useState(-1);
@@ -296,7 +297,6 @@ const App = () => {
   function receive(msg) { 
     if (msg.destinationName === receivetopic) {
     lasttimestamp = Date.now()/1000
-    // console.log(msg)
     var message = "";
     try {
       // Parse the JSON string into a JavaScript object
@@ -307,7 +307,7 @@ const App = () => {
     }
     // console.log(message)
     var nowtime = Date.now()/1000
-
+    console.log(message['status'])
     if (message['status'] === "bad") {
       Vibration.vibrate(vibration_pattern[Platform.OS])      
       // console.log("BAD")
@@ -349,9 +349,9 @@ const App = () => {
       setxcoord(message['you']['x'])
       setycoord(message['you']['y'])
 
-      changetrafficstatus(message['traffic']['status'])
-      changetraffictime(message['traffic']['timeleft'])
-      
+      // changetrafficstatus(message['traffic']['status'])
+      // changetraffictime(message['traffic']['timeleft'])
+
       // console.log(Date.now()/1000 - message['starttime'])
 
       if (message['you']['x'] === -2) {
@@ -517,7 +517,7 @@ const App = () => {
       </View>
 
       <View style={{height: '10%', alignItems: 'center', justifyContent: 'center',}}>
-        <Text>{trafficstatus} light, {traffictime}s left</Text>
+        {/* <Text>{trafficstatus} light, {traffictime}s left</Text> */}
       </View>
 
 
