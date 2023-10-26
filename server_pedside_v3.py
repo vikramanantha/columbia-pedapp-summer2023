@@ -48,8 +48,8 @@ ytest = 300
 mqtt_to_cv_ids = {}
 
 def settracking(ped_id_mqtt, x, y, place):
-    # settracking_realworld(ped_id_mqtt, x, y, place)
-    settracking_sim(ped_id_mqtt, x, y, place)
+    settracking_realworld(ped_id_mqtt, x, y, place)
+    # settracking_sim(ped_id_mqtt, x, y, place)
 
 
 def settracking_realworld(ped_id_mqtt, x, y, place):
