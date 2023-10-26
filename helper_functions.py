@@ -15,9 +15,41 @@ from datetime import datetime
 import os
 import numpy as np
 import scipy.optimize as optimize
+from sklearn.linear_model import LinearRegression
+avg = lambda arr: sum(arr)/len(arr)
 
 
 broker, port, sendtopic, receivetopic, client_id = None, None, None, None, None
+xy_latlong_model = None
+places = {
+    "W 120 at Amsterdam": {
+        "coordpairs": [
+            [[40.80930959999999885213, -73.95931310000000280525], [328,584]],
+            [[40.80943609999999921456, -73.95911300000000210275], [486,215]],
+            [[40.80932539999999875135, -73.95908500000000174168], [655,382]],
+            [[40.80920580000000086329, -73.95928050000000553155], [489,739]],
+            [[40.80931540000000268265, -73.95937419999999917763], [236,621]],
+            [[40.80936309999999878073, -73.95935869999999567881], [218,520]],
+            [[40.80935310000000271202, -73.95940450000000510045], [143,575]],
+            [[40.80941140000000189048, -73.95934320000000639084], [180,429]],
+            [[40.80943090000000239570, -73.95911789999999541578], [483,236]],
+            [[40.80928719999999998436, -73.95909389999999916654], [685,455]],
+            [[40.80933780000000155042, -73.95899640000000374584], [775,293]],
+            [[40.80946360000000083801, -73.95927369999999712036], [212,284]],
+            [[40.80931139999999857082, -73.95903239999999811971], [747,367]]
+        ]
+    },
+    # "Columbia University Lawn": {
+    #     "coordpairs": [
+    #         [[40.807622, -73.961617], [900,353]],
+    #         [[40.807015, -73.962079], [892,760]],
+    #         [[40.807322, -73.963122], [410,824]],
+    #         [[40.806750, -73.962983], [625,1077]]
+    #     ]
+    # }
+}
+
+
 
 #### IMPORTANT FUNCTIONS ####
 
@@ -90,7 +122,7 @@ def setup(
     sendtopic = ftopicsend
     receivetopic = ftopicreceive
     client_id = fclient_id
-    print(client_id, sendtopic)
+    print(client_id, receivetopic)
     return broker, port, sendtopic, receivetopic, client_id
     
     
@@ -136,6 +168,19 @@ def simple_receive(client, userdata, msg):
     message = msg.payload.decode()
     print("Message received:")
     print(message)
+    
+    return message
+
+def simple_receive_v2(client, userdata, msg):
+
+    message = msg.payload.decode()
+    print("Message received:")
+    print(message)
+    msg = json.loads(message)
+    curtime = datetime.fromtimestamp(msg['start_time'])
+    curtimestr = str(curtime).replace('.', '_').replace(':', '_')
+    with open('frames/sampleframes_yongjie_aug182023/frame_%s.json' % curtimestr, 'w') as file:
+        json.dump(msg, file, indent=4)
     
     return message
 
@@ -275,58 +320,52 @@ def get_frame_from_file_v3(message):
     # t = time, i = index, o = objects
     
     onlyrecognizing = ["vehicle"]
-    data["t"] = message['time']
+    data["t"] = message['start_time']
     data['o'] = {}
-    
-    # for ob in range(len(message['boxes'])):
-    #     tlx, tly, brx, bry = message['boxes'][ob]
-        
-        
-        
-    #     # assumes labels comes in this format:
-    #     # "id:30 vehicle 0.91",
-    #     idstr, obtype, confidence = message['labels'][ob].split(" ")
-        
-    #     future_coords = message['traj_tjs'][ob]
-        
-        
-    #     if (obtype not in onlyrecognizing): continue
-        
-    #     x = (tlx+brx)/2
-    #     y = (tly+bry)/2
-    #     id = int(idstr[3:])
-        
-        
-        
-    #     data['o'].append({
-    #         'type': obtype, 
-    #         'id': id, 
-    #         'x': x, 
-    #         'y': y
-    #     })   
-    ids = []
-    for ob in message['labels']:
+
+    # ids = []
+    # for ob in message['labels']:
+    for i in range(len(message['labels'])):
+        ob = message['labels'][i]
         idstr, obtype, confidence = ob.split(" ")
-        
         id = int(idstr[3:])
         
-        ids.append(id)
+        box = message['boxes'][i]
+        x1, y1, x2, y2 = box
+        xcoord = (x1+x2)/2
+        ycoord = (y1+y2)/2
         
-    ids.sort()
-    
-    for ind, id in enumerate(ids):
-        
-        ob = message['traj_tjs'][ind]
-        x = []
-        y = []
-        for fc in ob:
-            x.append(fc[0])
-            y.append(fc[1])
-            
         data['o'][id] = {
-            'x': x,
-            'y': y
+            'x': [xcoord],
+            'y': [ycoord],
+            'class': obtype
         }
+        
+    # ids.sort()
+    
+    # for ind, id in enumerate(ids):
+    for i in range(len(message['traj_id'])):
+        id = message['traj_id'][i]
+        fcs = message['traj_tjs'][i]
+        
+        for fc in fcs:
+            xfc, yfc = fc
+            if (id not in data['o']):
+                data['o'][id] = {
+                    'x': [xfc],
+                    'y': [yfc],
+                    'class': '?'
+                }
+                print("?", end='')
+            try:
+                data['o'][id]['x'].append(xfc)
+                data['o'][id]['y'].append(yfc)
+            except:
+                # print(message['labels'])
+                # print(message['traj_id'])
+                # print(id)
+                print("SOMETHINGS BAD")
+    print()
         
         
     return data    
@@ -479,7 +518,7 @@ def random_color(id=time.time()):
     r = random.randint(0, 255)
     g = random.randint(0, 255)
     b = random.randint(0, 255)
-
+    
     # Convert RGB to hexadecimal format (#RRGGBB)
     hex_color = "#{:02x}{:02x}{:02x}".format(r, g, b)
 
@@ -504,8 +543,11 @@ def get_time_in_seconds(time_string, date_string):
 
     return seconds_since_epoch
 
-
 def get_xy_from_latlong(lat, long, placename="W 120 at Amsterdam"):
+    return get_xy_from_latlong_v2(lat, long, placename)
+
+
+def get_xy_from_latlong_v1(lat, long, placename):
     start = time.time()
     places = {
         "W 120 at Amsterdam": {
@@ -608,3 +650,36 @@ def get_xy_from_latlong(lat, long, placename="W 120 at Amsterdam"):
     
     # lat = y*0.0002185 + x*0.000dbhf
     
+
+def get_xy_from_latlong_v2(lat, long, placename):
+    global xy_latlong_model
+    if (xy_latlong_model is None):
+        xy_latlong_model = LinearRegression()
+        xy_latlong_model.fit(
+            places[placename]['latlong'],
+            places[placename]['xy']
+        )
+        
+    x,y = xy_latlong_model.predict([[lat, long]])[0]
+    return x,y
+    
+def organizepoints(places):
+    
+    for placename in places:
+        ll = []
+        xy = []
+        for pair in places[placename]['coordpairs']:
+            ll.append(pair[0])
+            xy.append(pair[1])
+        
+        places[placename]['latlong'] = ll
+        places[placename]['xy'] = xy
+    
+    
+def epoch_to_timestamp(
+    epoch, 
+    format = "%b %-d %Y, %H:%M:%S.%f"
+):
+    return datetime.fromtimestamp(epoch).strftime(format)
+    
+# organizepoints(places) 
