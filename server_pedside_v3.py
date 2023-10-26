@@ -112,7 +112,7 @@ def receive_ped_coords(client, userdata, msg):
     msgtype, ped_id_mqtt, lat, long, latency, place = message.split(",") 
     
     ### FOR RECORDING INFO ###
-    rn = time.time()
+    rn = int(time.time())
     if (ped_id_mqtt not in quant_info):
         quant_info[ped_id_mqtt] = {
             "last ping": rn,
@@ -126,38 +126,41 @@ def receive_ped_coords(client, userdata, msg):
                 'server to phone warning mqtt': {}
             }
         }
-    else:
-        # quant_info[ped_id_mqtt]['latencies']['ping loop'][hf.epoch_to_timestamp(rn)] = rn-quant_info[ped_id_mqtt]['last ping']
-        # # quant_info[ped_id_mqtt]['latencies']['server to phone warning mqtt'][hf.epoch_to_timestamp(rn)] = latency
-        with open('fieldtestdata_v3_%s.json' % hf.epoch_to_timestamp(
-            quant_info["initialized"], 
-            format="%b_%-d_%Y_%H_%M_%S"
-        ), 'w') as file:
-            json.dump(quant_info, file, indent=4)
-        # rn = time.time()
-        # quant_info[ped_id_mqtt]['last ping'] = rn
+    # else:
+        # # quant_info[ped_id_mqtt]['latencies']['ping loop'][hf.epoch_to_timestamp(rn)] = rn-quant_info[ped_id_mqtt]['last ping']
+        # # # quant_info[ped_id_mqtt]['latencies']['server to phone warning mqtt'][hf.epoch_to_timestamp(rn)] = latency
+        # with open('fieldtestdata_v3_%s.json' % hf.epoch_to_timestamp(
+        #     quant_info["initialized"], 
+        #     format="%b_%-d_%Y_%H_%M_%S"
+        # ), 'w') as file:
+        #     json.dump(quant_info, file, indent=4)
+        # # rn = time.time()
+        # # quant_info[ped_id_mqtt]['last ping'] = rn
         
-    
+    ## TODO: There is a problem with the JSON Serialization, it says it cannot serialize int64
+    # Look into this
     
     if (msgtype == 'tracking'):
         settracking(ped_id_mqtt, int(lat), int(long), place)
-        
+
     try:
         vehicle_data = hf.read_json_file_v2()
     except Exception as e:
+
         try:
             time.sleep(0.01)
             vehicle_data = hf.read_json_file_v2()
         except: # sometimes it just fails, so there's nothing you can do 
+
             return
-        
+
     cameratime = vehicle_data['t']
-    trafficlight = 'RED'
-    trafficcolor = '#ff0000'
-    traffictimeleft = 3
+    # trafficlight = 'RED'
+    # trafficcolor = '#ff0000'
+    # traffictimeleft = 3
         
     sendbacktopic = hf.sendtopic + "/" + ped_id_mqtt # The sendback topic is specific to the ped id
-        
+    
     if (ped_id_mqtt not in mqtt_to_cv_ids):
         print(f"Ped {ped_id_mqtt} hasn't been established yet")
         
@@ -180,17 +183,17 @@ def receive_ped_coords(client, userdata, msg):
                 'x': -1,
                 'y': -1
             },
-            'trafficlight': {
-                'status': trafficlight,
-                'color': trafficcolor,
-                'timeleft': traffictimeleft
-            },
+            # 'trafficlight': {
+            #     'status': trafficlight,
+            #     'color': trafficcolor,
+            #     'timeleft': traffictimeleft
+            # },
             'status': 'info',
             'strange': 0, # to send extra information, mainly for debugging
             # 'starttime': cameratime,
             'starttime': time.time(),
         }
-        
+
         veh_points = []
         for vehnump in vehicle_numps:
             veh_random_color = hf.random_color(vehnump)
@@ -223,6 +226,7 @@ def receive_ped_coords(client, userdata, msg):
     ttc_id = -1
     
     vehicle_numps = vehicle_data['o']
+
     
     if (ped_id_mqtt in mqtt_to_cv_ids):
         # print(f"Ped MQTT ID: {ped_id_mqtt} | time {times}...")
@@ -248,11 +252,11 @@ def receive_ped_coords(client, userdata, msg):
                     'x': -2,
                     'y': -2
                 },
-                'trafficlight': {
-                    'status': trafficlight,
-                    'color': trafficcolor,
-                    'timeleft': traffictimeleft
-                },
+                # 'trafficlight': {
+                #     'status': trafficlight,
+                #     'color': trafficcolor,
+                #     'timeleft': traffictimeleft
+                # },
                 'status': 'info',
                 'strange': 0, # to send extra information, mainly for debugging
                 # 'starttime': cameratime,
@@ -322,7 +326,7 @@ def receive_ped_coords(client, userdata, msg):
                 ttc = ttc_thiscar / future_coords_fps
                 ttc_id = vehicle_id
                 
-                
+
         if (ttc_id == -1 or ttc >= ttc_threshold):
             status = "good"
         else:
@@ -373,11 +377,11 @@ def receive_ped_coords(client, userdata, msg):
                 'x': round(ped_xnump[0], 2),
                 'y': round(ped_ynump[0], 2)
             },
-            'trafficlight': {
-                'status': trafficlight,
-                'color': trafficcolor,
-                'timeleft': traffictimeleft
-            },
+            # 'trafficlight': {
+            #     'status': trafficlight,
+            #     'color': trafficcolor,
+            #     'timeleft': traffictimeleft
+            # },
             'status': 'info',
             'strange': 0, # to send extra information, mainly for debugging,
             # 'starttime': cameratime,
@@ -429,7 +433,13 @@ def receive_ped_coords(client, userdata, msg):
         obj_data['future']['ped'] = ped_points
         obj_data['future']['veh'] = veh_points
 
-        hf.send(client=client, data=json.dumps(obj_data), topic_send=sendbacktopic)
+        try:
+            hf.send(client=client, data=json.dumps(obj_data), topic_send=sendbacktopic)
+        except Exception as e:
+            print(e)
+            # TODO
+            # There is a problem with the JSON Serialization, 
+            # it said that it cannot serialize int64
         end1 = time.time()
 
         # quant_info[ped_id_mqtt]['latencies']['camera to fc send'][hf.epoch_to_timestamp(rn)] = end1 - cameratime
